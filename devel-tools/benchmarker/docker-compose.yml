@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  main:
+    build: .
+    command: python benchmarker.py run
+    volumes:
+      - .:/benchmarker
+      - /mnt/data/test_data:/testdata
+    ports:
+      - "8000:8000"
+    networks:
+      - external
+      - internal
+    security_opt:
+      - seccomp:zeek-seccomp.json
+    cap_add:
+      - SYS_NICE
+
+networks:
+  external:
+  internal:

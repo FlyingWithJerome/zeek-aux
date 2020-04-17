@@ -1,0 +1,21 @@
+#!/bin/sh
+
+DATA_FILE=""
+BASE_DIR=$(dirname $(realpath -s $0))
+
+git clone --recursive --depth=1 --branch $1 https://github.com/zeek/zeek.git src
+mkdir install
+cd src
+./configure --prefix=${BASE_DIR}/install --generator=Ninja --build-type=release
+cd build
+ninja install
+
+cd $BASE_DIR
+mkdir logs
+cd logs
+${BASE_DIR}/perf-benchmark -m intf -i eth1 -s "${BASE_DIR}/src/testing/btest/random.seed" -b "${BASE_DIR}/install/bin/zeek" -d "${DATA_FILE}" 2>&1 | tee ${BASE_DIR}/benchmark.log
+
+cd ${BASE_DIR}
+rm -rf src
+rm -rf install
+rm -rf logs
