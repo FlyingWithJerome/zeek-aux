@@ -15,12 +15,13 @@
 
 /* User-specified options that stay constant during a run of zeek-cut. */
 struct useropts {
-    int showhdr;     /* show log headers? (0=no, 1=only first, 2=all) */
-    int negate;      /* show all but the specified columns? (0=no, 1=yes) */
-    int timeconv;    /* do time conversion? (0=no, 1=local, 2=UTC) */
-    char **columns;  /* array of user-specified column names */
-    int num_columns; /* number of user-specified column names */
-    const char *ofs; /* user-specified output field separator character */
+    int showhdr;      /* show log headers? (0=no, 1=only first, 2=all) */
+    int showcolnames; /* show column names? (0=no, 1=yes) */
+    int negate;       /* show all but the specified columns? (0=no, 1=yes) */
+    int timeconv;     /* do time conversion? (0=no, 1=local, 2=UTC) */
+    char **columns;   /* array of user-specified column names */
+    int num_columns;  /* number of user-specified column names */
+    const char *ofs;  /* user-specified output field separator character */
     const char *timefmt; /* strftime format string for time conversion */
 };
 
@@ -31,6 +32,7 @@ struct logparams {
     int idx_range;   /* max. value in "out_indexes" plus one */
     int *time_cols;  /* array of columns (0=not timestamp, 1=timestamp) */
     char **tmp_fields; /* array of pointers to each field on a line */
+    char **err_fields; /* array of pointers to columns that are prompted by users and do not exist*/
     int num_fields;    /* number of fields in log file */
     char ifs[2];     /* input field separator character */
     char ofs[2];     /* output field separator character */
@@ -50,6 +52,7 @@ int usage(void) {
     puts("    -d       Convert time values into human-readable format.");
     puts("    -D <fmt> Like -d, but specify format for time (see strftime(3) for syntax).");
     puts("    -F <ofs> Sets a different output field separator character.");
+    puts("    -H       Print column names at the top for a csv/tsv-style output.");
     puts("    -h       Show help.");
     puts("    -n       Print all fields *except* those specified.");
     puts("    -u       Like -d, but print timestamps in UTC instead of local time.");
@@ -156,10 +159,22 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
     }
     lp->tmp_fields = tmpptr;
 
+    /* Set tmp_fields to point to each field on the line */
+    if ((copy_of_line = strdup(line)) == NULL) {
+        return 1;
+    }
+    field_ptr = copy_of_line;
+
+    idx = 0;
+    while ((field = strsep(&field_ptr, lp->ifs)) != NULL) {
+        lp->tmp_fields[idx++] = field;
+    }
+
     if (bopts->num_columns == 0) {
         /* No columns specified on cmd-line, so use all the columns */
         out_indexes = (int *) realloc(lp->out_indexes, lp->num_fields * sizeof(int));
         if (out_indexes == NULL) {
+            free(copy_of_line);
             return 1;
         }
 
@@ -170,18 +185,10 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         lp->out_indexes = out_indexes;
         lp->idx_range = lp->num_fields;
         lp->num_out_indexes = lp->num_fields;
+
+        free(copy_of_line);
+        
         return 0;
-    }
-
-    /* Set tmp_fields to point to each field on the line */
-    if ((copy_of_line = strdup(line)) == NULL) {
-        return 1;
-    }
-    field_ptr = copy_of_line;
-
-    idx = 0;
-    while ((field = strsep(&field_ptr, lp->ifs)) != NULL) {
-        lp->tmp_fields[idx++] = field;
     }
 
     int out_idx = 0;
@@ -198,7 +205,14 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
             out_indexes[idx] = string_index(lp->tmp_fields, lp->num_fields, bopts->columns[idx]);
             if (out_indexes[idx] > maxval) {
                 maxval = out_indexes[idx];
+            } else {
+                /*Line does not exist. Most likely the user made an error.
+                * In this case, print the field names that the user prompted
+                * so that the users can know which column(s) DNE.
+                */
+                lp->err_fields = bopts->columns;
             }
+            
         }
         out_idx = bopts->num_columns;
     } else {
@@ -272,6 +286,29 @@ void output_time(const char *field, struct logparams *lp, struct useropts *bopts
 
     /* failed to convert, so just output the field without modification */
     fputs(field, stdout);
+}
+
+/* Print the fieldnames to the first line. (for -H option).
+ * Field names use the same separator as the columns.
+ */
+void output_fieldnames(const struct logparams *const lp, const struct useropts *const bopts) {
+    if (lp->num_out_indexes == 0 || lp->tmp_fields == NULL) {
+        return;
+    }
+
+    int index;
+
+    if (lp->err_fields == NULL) {
+        for (index = 0; index < lp->num_out_indexes; index++){
+            fputs(lp->tmp_fields[lp->out_indexes[index]], stdout);
+            fputs(index != lp->num_out_indexes-1 ? &(lp->ofs[0]) : "\n", stdout);
+        }
+    } else {
+        for (index = 0; index < bopts->num_columns; index++){
+            fputs(lp->err_fields[index], stdout);
+            fputs(index != bopts->num_columns-1 ? &(lp->ofs[0]) : "\n", stdout);
+        }
+    }
 }
 
 /* Output the columns of "line" that the user specified.  The value of "hdr"
@@ -372,6 +409,7 @@ int zeek_cut(struct useropts bopts) {
     lp.ifs[1] = '\0';
     lp.unsetf = strdup("-");
     lp.prev_ts = -1; /* initialize with an invalid time value */
+    lp.err_fields = NULL;
 
     if (lp.unsetf == NULL) {
         fputs("zeek-cut: out of memory\n", stderr);
@@ -441,6 +479,9 @@ int zeek_cut(struct useropts bopts) {
                 ret = 1;
                 break;
             }
+            if (bopts.showcolnames == 1) {
+                output_fieldnames(&lp, &bopts);
+            }
         } else if (!strncmp(line, "#types", 6)) {
             if (!prev_fields_line) {
                 fputs("zeek-cut: bad log header (missing #fields line)\n", stderr);
@@ -489,6 +530,7 @@ int main(int argc, char *argv[]) {
 
     struct useropts bopts;
     bopts.showhdr = 0;
+    bopts.showcolnames = 0;
     bopts.negate = 0;
     bopts.timeconv = 0;
     bopts.ofs = "";
@@ -499,7 +541,7 @@ int main(int argc, char *argv[]) {
         {0,         0,              0,  0}
     };
 
-    while ((c = getopt_long(argc, argv, "cCnF:duD:U:h", long_opts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "cCnF:duD:U:h:H", long_opts, NULL)) != -1) {
         switch (c) {
             case 'c':
                 bopts.showhdr = 1;
@@ -519,6 +561,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 bopts.timeconv = 1;
+                break;
+            case 'H':
+                bopts.showcolnames = 1;
                 break;
             case 'u':
                 bopts.timeconv = 2;
