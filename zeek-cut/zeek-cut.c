@@ -90,6 +90,20 @@ char parsesep(const char *sepstr) {
     return ifs;
 }
 
+/* properly delete fieldnames, a double pointer */
+void delete_field_names(char** field_names, int num_field_names) {
+    if (field_names == NULL) {
+        return;
+    }
+    int index;
+    for (index = 0; index < num_field_names; index ++) {
+        free(field_names[index]);
+    }
+
+    free(field_names);
+    field_names = NULL;
+}
+
 /* Determine the columns (if any) where the field is "time".  Return 0 for
  * success, and non-zero otherwise.
  */
@@ -394,19 +408,6 @@ void output_indexes(int hdr, char *line, struct logparams *lp, struct useropts *
         firstdone = 1;
     }
     putchar('\n');
-}
-
-void delete_field_names(char** field_names, int num_field_names) {
-    if (field_names == NULL) {
-        return;
-    }
-    int index;
-    for (index = 0; index < num_field_names; index ++) {
-        free(field_names[index]);
-    }
-
-    free(field_names);
-    field_names = NULL;
 }
 
 /* Reads one or more log files from stdin and outputs them to stdout according
