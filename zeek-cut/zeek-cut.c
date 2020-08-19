@@ -32,6 +32,7 @@ struct logparams {
     int idx_range;   /* max. value in "out_indexes" plus one */
     int *time_cols;  /* array of columns (0=not timestamp, 1=timestamp) */
     char **tmp_fields; /* array of pointers to each field on a line */
+    char **field_names; /* array of the field names */
     char **err_fields; /* array of pointers to columns that are prompted by users and do not exist*/
     int num_fields;    /* number of fields in log file */
     char ifs[2];     /* input field separator character */
@@ -159,6 +160,14 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
     }
     lp->tmp_fields = tmpptr;
 
+    char **field_names_ptr;
+    field_names_ptr = (char **)malloc((lp->num_fields + 1) * sizeof(char *));
+    if (field_names_ptr == NULL) {
+        return 1;
+    }
+
+    lp->field_names = field_names_ptr;
+
     /* Set tmp_fields to point to each field on the line */
     if ((copy_of_line = strdup(line)) == NULL) {
         return 1;
@@ -167,7 +176,7 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
 
     idx = 0;
     while ((field = strsep(&field_ptr, lp->ifs)) != NULL) {
-        lp->tmp_fields[idx++] = field;
+        lp->field_names[idx++] = strdup(field);
     }
 
     if (bopts->num_columns == 0) {
@@ -201,7 +210,7 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         }
 
         for (idx = 0; idx < bopts->num_columns; ++idx) {
-            out_indexes[idx] = string_index(lp->tmp_fields, lp->num_fields, bopts->columns[idx]);
+            out_indexes[idx] = string_index(lp->field_names, lp->num_fields, bopts->columns[idx]);
             if (out_indexes[idx] > maxval) {
                 maxval = out_indexes[idx];
             } else {
@@ -222,7 +231,7 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         }
 
         for (idx = 0; idx < lp->num_fields; ++idx) {
-            if (string_index(bopts->columns, bopts->num_columns, lp->tmp_fields[idx]) == -1) {
+            if (string_index(bopts->columns, bopts->num_columns, lp->field_names[idx]) == -1) {
                 out_indexes[out_idx++] = idx;
                 if (idx > maxval) {
                     maxval = idx;
@@ -291,7 +300,7 @@ void output_time(const char *field, struct logparams *lp, struct useropts *bopts
  * Field names use the same separator as the columns.
  */
 void output_fieldnames(const struct logparams *const lp, const struct useropts *const bopts) {
-    if (lp->num_out_indexes == 0 || lp->tmp_fields == NULL) {
+    if (lp->num_out_indexes == 0 || lp->field_names == NULL) {
         return;
     }
 
@@ -299,7 +308,7 @@ void output_fieldnames(const struct logparams *const lp, const struct useropts *
 
     if (lp->err_fields == NULL) {
         for (index = 0; index < lp->num_out_indexes; index++){
-            fputs(lp->tmp_fields[lp->out_indexes[index]], stdout);
+            fputs(lp->field_names[lp->out_indexes[index]], stdout);
             fputs(index != lp->num_out_indexes-1 ? &(lp->ofs[0]) : "\n", stdout);
         }
     } else {
@@ -377,6 +386,16 @@ void output_indexes(int hdr, char *line, struct logparams *lp, struct useropts *
     putchar('\n');
 }
 
+void delete_field_names(char** field_names, int num_field_names) {
+    int index;
+    for (index = 0; index < num_field_names; index ++) {
+        free(field_names[index]);
+    }
+
+    free(field_names);
+    field_names = NULL;
+}
+
 /* Reads one or more log files from stdin and outputs them to stdout according
  * to the options specified in "bopts".  Returns 0 on success, and non-zero
  * otherwise.
@@ -402,6 +421,7 @@ int zeek_cut(struct useropts bopts) {
     lp.idx_range = 0;
     lp.time_cols = NULL;
     lp.tmp_fields = NULL;
+    lp.field_names = NULL;
     lp.num_fields = 0;
     lp.ofs[0] = '\t';
     lp.ofs[1] = '\0';
@@ -517,6 +537,7 @@ int zeek_cut(struct useropts bopts) {
     free(lp.tmp_fields);
     free(lp.unsetf);
     free(line);
+    delete_field_names(lp.field_names, lp.num_fields);
     return ret;
 }
 
