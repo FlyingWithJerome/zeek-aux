@@ -1,0 +1,1 @@
+zeek-cut: header lines (-C,-c) and field names (-H) cannot be set together

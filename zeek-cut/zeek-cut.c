@@ -614,6 +614,11 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    if (bopts.showhdr != 0 && bopts.showcolnames == 1) {
+        fputs("zeek-cut: header lines (-C,-c) and field names (-H) cannot be set together\n", stderr);
+        exit(1);
+    }
+
     bopts.columns = &argv[optind];
     bopts.num_columns = argc - optind;
 
