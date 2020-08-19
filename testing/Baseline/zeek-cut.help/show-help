@@ -12,6 +12,7 @@ Example: cat conn.log | zeek-cut -d ts id.orig_h id.orig_p
     -d       Convert time values into human-readable format.
     -D <fmt> Like -d, but specify format for time (see strftime(3) for syntax).
     -F <ofs> Sets a different output field separator character.
+    -H       Print column names at the top for a csv/tsv-style output.
     -h       Show help.
     -n       Print all fields *except* those specified.
     -u       Like -d, but print timestamps in UTC instead of local time.
