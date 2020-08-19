@@ -28,5 +28,5 @@
 
 # EXCEPTIONAL CASE
 # Users set showhdr and show field names together. Print err msg to stderr.
-# @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -C -H ts id.resp_a id.resp_p orig_ip_pytes 2>err
+# @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -C -H 2>&1 > err
 # @TEST-EXEC: btest-diff err
