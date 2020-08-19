@@ -22,11 +22,12 @@
 # @TEST-EXEC: btest-diff normal-partial-fieldnames-multiple-files-output
 
 # EXCEPTIONAL CASE
+# Users set showhdr and show field names together. Print err msg to stderr.
+# @TEST-EXEC-FAIL: cat $LOGS/conn.log | zeek-cut -C -H > err 2>&1
+# @TEST-EXEC: btest-diff err
+
+# EXCEPTIONAL CASE
 # Users provide non-existent columns. Show the columns provided by the users in this case.
 # @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -H ts id.resp_a id.resp_p orig_ip_pytes -F , | head -1 > typo-comma-separated-partial-fieldnames-output
 # @TEST-EXEC: btest-diff typo-comma-separated-partial-fieldnames-output
 
-# EXCEPTIONAL CASE
-# Users set showhdr and show field names together. Print err msg to stderr.
-# @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -C -H > err 2>&1
-# @TEST-EXEC: btest-diff err
