@@ -206,6 +206,7 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         /* One or more column names were specified on cmd-line */
         out_indexes = (int *) realloc(lp->out_indexes, bopts->num_columns * sizeof(int));
         if (out_indexes == NULL) {
+            free(copy_of_line);
             return 1;
         }
 
@@ -227,6 +228,7 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         /* The "-n" option was specified on cmd-line */
         out_indexes = (int *) realloc(lp->out_indexes, lp->num_fields * sizeof(int));
         if (out_indexes == NULL) {
+            free(copy_of_line);
             return 1;
         }
 
@@ -387,6 +389,9 @@ void output_indexes(int hdr, char *line, struct logparams *lp, struct useropts *
 }
 
 void delete_field_names(char** field_names, int num_field_names) {
+    if (field_names == NULL) {
+        return;
+    }
     int index;
     for (index = 0; index < num_field_names; index ++) {
         free(field_names[index]);
