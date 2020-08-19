@@ -18,7 +18,7 @@
 # @TEST-EXEC: btest-diff comma-separated-partial-fieldnames-output
 
 # Only print fieldname once when multiple files are fed.
-# @TEST-EXEC: cat $LOGS/conn.log $LOGS/conn.log | zeek-cut -H ts id.resp_h id.resp_p orig_ip_bytes | head -1 > normal-partial-fieldnames-multiple-files-output
+# @TEST-EXEC: cat $LOGS/conn.log $LOGS/conn.log | zeek-cut -H ts id.resp_h id.resp_p orig_ip_bytes > normal-partial-fieldnames-multiple-files-output
 # @TEST-EXEC: btest-diff normal-partial-fieldnames-multiple-files-output
 
 # EXCEPTIONAL CASE

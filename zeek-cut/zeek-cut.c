@@ -66,7 +66,7 @@ int usage(void) {
 /* Return the index in "haystack" where "needle" is located (or -1 if not
  * found).
  */
-int string_index(char* haystack[], int haystack_size, const char *needle) {
+int string_index(char *haystack[], int haystack_size, const char *needle) {
     int i;
     for (i = 0; i < haystack_size; ++i) {
         if (!strcmp(haystack[i], needle)) {
