@@ -65,7 +65,7 @@ int usage(void) {
 /* Return the index in "haystack" where "needle" is located (or -1 if not
  * found).
  */
-int string_index(char *haystack[], int haystack_size, const char *needle) {
+int string_index(char* haystack[], int haystack_size, const char *needle) {
     int i;
     for (i = 0; i < haystack_size; ++i) {
         if (!strcmp(haystack[i], needle)) {
@@ -187,7 +187,6 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
         lp->num_out_indexes = lp->num_fields;
 
         free(copy_of_line);
-        
         return 0;
     }
 
@@ -388,6 +387,7 @@ int zeek_cut(struct useropts bopts) {
     int headers_seen = 0;  /* 0=no header blocks seen, 1=one seen, 2=2+ seen */
     int prev_line_hdr = 0; /* previous line was a header line? 0=no, 1=yes */
     int prev_fields_line = 0; /* previous line was #fields line? 0=no, 1=yes */
+    int fieldname_printed = 0; /* the fieldnames had already been printed (avoid duplicate headers in processing multiple logs) */
     ssize_t linelen;
     size_t linesize = 100000;
     char *line = (char *) malloc(linesize);
@@ -479,8 +479,9 @@ int zeek_cut(struct useropts bopts) {
                 ret = 1;
                 break;
             }
-            if (bopts.showcolnames == 1) {
+            if (bopts.showcolnames == 1 && fieldname_printed == 0) {
                 output_fieldnames(&lp, &bopts);
+                fieldname_printed = 1;
             }
         } else if (!strncmp(line, "#types", 6)) {
             if (!prev_fields_line) {
