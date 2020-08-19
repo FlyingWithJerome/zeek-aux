@@ -9,15 +9,15 @@
 # @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -H ts id.resp_h id.resp_p resp_bytes | head -1 > normal-partial-fieldnames-output
 # @TEST-EXEC: btest-diff normal-partial-fieldnames-output
 
-# Show only one fieldname for a log file, prompted by users.
+# Show only one fieldnames for a log file, prompted by users.
 # @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -H orig_ip_bytes | head -1 > normal-one-fieldname-output
 # @TEST-EXEC: btest-diff normal-one-fieldname-output
 
-# Show multiple fieldname for a log file, with an user-specified delimiter.
+# Show multiple fieldnames for a log file, with an user-specified delimiter.
 # @TEST-EXEC: cat $LOGS/conn.log | zeek-cut -H ts id.resp_h id.resp_p orig_ip_bytes -F , | head -1 > comma-separated-partial-fieldnames-output
 # @TEST-EXEC: btest-diff comma-separated-partial-fieldnames-output
 
-# Only print fieldname once when multiple files are fed.
+# Only print fieldnames once when multiple files are fed.
 # @TEST-EXEC: cat $LOGS/conn.log $LOGS/conn.log | zeek-cut -H ts id.resp_h id.resp_p orig_ip_bytes > normal-partial-fieldnames-multiple-files-output
 # @TEST-EXEC: btest-diff normal-partial-fieldnames-multiple-files-output
 

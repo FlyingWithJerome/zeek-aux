@@ -176,7 +176,15 @@ int find_output_indexes(char *line, struct logparams *lp, struct useropts *bopts
 
     idx = 0;
     while ((field = strsep(&field_ptr, lp->ifs)) != NULL) {
-        lp->field_names[idx++] = strdup(field);
+        if ((lp->field_names[idx++] = strdup(field)) == NULL) {
+            /* Failed to allocate a field name, and therefore unable
+             * to get a full list of field names. Delete all field names
+             * and abort.
+             */
+            delete_field_names(lp->field_names, idx);
+            free(copy_of_line);
+            return 1;
+        }
     }
 
     if (bopts->num_columns == 0) {
